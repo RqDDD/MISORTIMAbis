@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -47,6 +48,117 @@ public class GithubHttpClient {
      * @throws URISyntaxException
      * @throws InterruptedException
      */
+    public JSONObject getRawDataJson2(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {
+        List<NameValuePair> urlParams = URLEncodedUtils.parse(new URI(urlEncodeSpecificChars(URLStringApi)), Charset.forName("UTF-8"));
+
+        int currentPageNumber = 1;
+        int lastPageNumber = 1;
+        String urlNextPageString = null;
+        boolean isFirstPage = true;
+
+
+        for (NameValuePair param : urlParams) {
+            if(param.getName().equals("page")){
+                currentPageNumber = Integer.parseInt(param.getValue());
+            }
+        }
+
+        logger.info("Get on : " + URLStringApi);
+        //execute the first request
+        HttpGet httpGet = new HttpGet(urlEncodeSpecificChars(URLStringApi));
+
+        //Handle response body
+        HttpResponse httpResponse = httpClient.execute(httpGet);
+        HttpEntity httpEntity = httpResponse.getEntity();
+        String responseString = EntityUtils.toString(httpEntity, "UTF-8");
+        
+//        System.out.println(responseString.length());
+//        System.out.println(responseString.substring(0, 1));
+//        System.out.println(responseString.substring(responseString.length()-1, responseString.length()));
+        if ( responseString.substring(0, 1).equals("[") ){
+        	responseString = responseString.substring(1,responseString.length()-1);
+        }
+        
+        //responseString = "{" + responseString + "}";
+        //System.out.println(responseString);
+        
+        //Get header for the next page
+        Header linkHeader = httpResponse.getFirstHeader("Link");
+
+        //Get headers and values for API limitations
+        Long timestampLimitResetHeader   = Long.parseLong(httpResponse.getFirstHeader("X-RateLimit-Reset").getValue());
+        Integer rateLimitRemainingHeader = Integer.parseInt(httpResponse.getFirstHeader("X-RateLimit-Remaining").getValue());
+        
+        ArrayList<JSONObject> jsonObjectList = new ArrayList<JSONObject>();
+        boolean check = true;
+        while(check) {
+        	System.out.println(responseString);
+        	jsonObjectList.add(new JSONObject(responseString));
+        	int sizeJson = jsonObjectList.get(jsonObjectList.size()-1).toString().length();
+//        	System.out.println(jsonObjectList.get(jsonObjectList.size()-1).toString());
+//        	System.out.println(sizeJson);
+        	
+        	if(sizeJson+1<responseString.length()) {
+        		responseString = responseString.substring(sizeJson+1, responseString.length());	
+        	}
+        	else {
+        		check = false;
+        	}
+        	
+
+        }
+               
+        System.out.println("STOP");
+        
+        //JSONObject jsonObjectResponse = new JSONObject(responseString);
+        //System.out.println(jsonObjectResponse.toString());
+        logger.debug("Rate limit remaining : " + rateLimitRemainingHeader);
+
+        githubAPILimitManager.handleLimitAPIGithub(timestampLimitResetHeader, rateLimitRemainingHeader);
+
+        if(linkHeader != null){
+        	System.out.println(linkHeader);
+            HeaderElement[] headerElementTabLink = linkHeader.getElements();
+            for (HeaderElement headerElement : headerElementTabLink) {
+                String headerElementLinkString = headerElement.toString();
+
+                if(headerElementLinkString.contains("next")) {
+                    urlNextPageString = headerElementLinkString.substring(headerElementLinkString.indexOf("<") + 1, headerElementLinkString.indexOf(">"));
+                    logger.debug("Next page : " + urlNextPageString);
+                }
+                if(headerElementLinkString.contains("prev")) {
+                    isFirstPage = false;
+                }
+                if (headerElementLinkString.contains("last")){
+                    lastPageNumber = Integer.parseInt(StringUtils.substringBetween(headerElementLinkString,"page=", ">"));
+                }
+            }
+        }
+
+        if(isFirstPage){
+        	for(JSONObject jsonObject : jsonObjectList) {
+                //jsonAllItems = jsonObjectResponse;
+        		jsonAllItems.accumulate("items", jsonObject);
+                //System.out.println(jsonAllItems.toString());
+        	}
+
+        }else{
+            //concatenate list items
+        	for(JSONObject jsonObject : jsonObjectList) {
+        		jsonAllItems.accumulate("items", jsonObject);
+        	}
+        }
+
+        //return the json object if there is no next page
+        if(urlNextPageString == null || urlNextPageString.equals(""))
+            return jsonAllItems;
+
+        //display launchbar
+        LoggerPrintUtils.printLaunchBar(logger,"Progress status request Github API" ,currentPageNumber,lastPageNumber);
+        //Call recursively on the next page
+        return getRawDataJson2(urlNextPageString, jsonAllItems);
+    }
+    
     public JSONObject getRawDataJson(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {
         List<NameValuePair> urlParams = URLEncodedUtils.parse(new URI(urlEncodeSpecificChars(URLStringApi)), Charset.forName("UTF-8"));
 
@@ -70,7 +182,15 @@ public class GithubHttpClient {
         HttpResponse httpResponse = httpClient.execute(httpGet);
         HttpEntity httpEntity = httpResponse.getEntity();
         String responseString = EntityUtils.toString(httpEntity, "UTF-8");
-
+        
+//        System.out.println(responseString.length());
+//        System.out.println(responseString.substring(0, 1));
+//        System.out.println(responseString.substring(responseString.length()-1, responseString.length()));
+        if ( responseString.substring(0, 1).equals("[") ){
+        	responseString = responseString.substring(1,responseString.length()-1);
+        }
+        
+        
         //Get header for the next page
         Header linkHeader = httpResponse.getFirstHeader("Link");
 
@@ -85,10 +205,11 @@ public class GithubHttpClient {
         githubAPILimitManager.handleLimitAPIGithub(timestampLimitResetHeader, rateLimitRemainingHeader);
 
         if(linkHeader != null){
+        	//System.out.println(linkHeader);
             HeaderElement[] headerElementTabLink = linkHeader.getElements();
             for (HeaderElement headerElement : headerElementTabLink) {
                 String headerElementLinkString = headerElement.toString();
-
+                System.out.println(headerElementLinkString);
                 if(headerElementLinkString.contains("next")) {
                     urlNextPageString = headerElementLinkString.substring(headerElementLinkString.indexOf("<") + 1, headerElementLinkString.indexOf(">"));
                     logger.debug("Next page : " + urlNextPageString);

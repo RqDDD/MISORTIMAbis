@@ -73,40 +73,55 @@ public class Main {
             e.printStackTrace();
         }*/
 
-        /*Logger logger = LogManager.getLogger(Main.class);
+        Logger logger = LogManager.getLogger(Main.class);
+//
+//        Options options = new Options();
+//        options.addOption("u", "url", true, "Set the URL to use for the request on Github API")
+//                .addOption("d", "directory", true, "Set the directory use to store the results of mining : JSON files and repositories")
+//                .addOption("fn", "filenames", true,"Set the filename prefix for JSON files")
+//                .addOption("fe", "fields",true,"List of fields to extract")
+//                .addOption("h", "help", false,"Display the help");
+//
+//        options.getOption("fe").setArgs(Option.UNLIMITED_VALUES);
+//
+//        final CommandLineParser parser = new DefaultParser();
+//        final CommandLine cmd = parser.parse(options, args, true);
+//
+//        if(cmd.hasOption("h") || cmd.hasOption("help")){
+//            HelpFormatter formatter = new HelpFormatter();
+//            formatter.printHelp("java -jar MiSoRTIMA-1.0-SNAPSHOT-jar-with-dependencies.jar <option> <value>", options);
+//            System.exit(1);
+//        }
+//
+//        String url       = cmd.getOptionValue("u");
+//        String directory = cmd.getOptionValue("d");
+//        String filename  = cmd.getOptionValue("fn");
+//        List<String> fieldsToExtract = new ArrayList<>(Arrays.asList(cmd.getOptionValues("fe")));
 
-        Options options = new Options();
-        options.addOption("u", "url", true, "Set the URL to use for the request on Github API")
-                .addOption("d", "directory", true, "Set the directory use to store the results of mining : JSON files and repositories")
-                .addOption("fn", "filenames", true,"Set the filename prefix for JSON files")
-                .addOption("fe", "fields",true,"List of fields to extract")
-                .addOption("h", "help", false,"Display the help");
 
-        options.getOption("fe").setArgs(Option.UNLIMITED_VALUES);
-
-        final CommandLineParser parser = new DefaultParser();
-        final CommandLine cmd = parser.parse(options, args, true);
-
-        if(cmd.hasOption("h") || cmd.hasOption("help")){
-            HelpFormatter formatter = new HelpFormatter();
-            formatter.printHelp("java -jar MiSoRTIMA-1.0-SNAPSHOT-jar-with-dependencies.jar <option> <value>", options);
-            System.exit(1);
-        }
-
-        String url       = cmd.getOptionValue("u");
-        String directory = cmd.getOptionValue("d");
-        String filename  = cmd.getOptionValue("fn");
-        List<String> fieldsToExtract = new ArrayList<>(Arrays.asList(cmd.getOptionValues("fe")));
-
+		String url       = "https://api.github.com/repos/marko-js/marko";
+        String directory = "/home/rqd/Bureau/EMACS_3A/Mission_tech";
+        String filename  = "test";
+        List<String> fieldsToExtract = new ArrayList<>();
+        fieldsToExtract.add("tags_url");
         try {
             MisortimaFacade misortimaFacade = new MisortimaFacade();
-            misortimaFacade.extractAndSaveJSONDataFromURL(url,directory,filename + "_raw.json");
-            misortimaFacade.filterData(fieldsToExtract,
-                    directory + "/" + filename + "_raw.json",
-                    directory,
-                    filename + "_filtered.json");
-            misortimaFacade.associatedRepositoriesListToLastCommit(directory + "/" + filename + "_filtered.json",
-                    directory,filename + "_with_commit.json");
+//            misortimaFacade.extractAndSaveJSONDataFromURL(url,directory,filename + "_raw.json");
+//            misortimaFacade.filterData(fieldsToExtract,
+//                    directory + "/" + filename + "_raw.json",
+//                    directory,
+//                    filename + "_filtered.json");
+//            misortimaFacade.associatedRepositoriesListToLastCommit(directory + "/" + filename + "_filtered.json",
+//                    directory,filename + "_with_commit.json");
+//            
+//            
+//            JSONObject jsonTagsURL = misortimaFacade.readJSONfile(directory + "/" +filename + "_filtered.json");
+//            JSONArray jsonArrayTagsURL = jsonTagsURL.getJSONArray("items");
+//            String tagURL = (String) jsonArrayTagsURL.get(0);
+//            System.out.println(tagURL);
+            
+            misortimaFacade.extractAndSaveJSONDataFromURL("https://api.github.com/repos/marko-js/marko/tags",directory, "testTag");
+            
 
         } catch (GitAPIException e) {
             logger.error(e.getMessage());
@@ -114,7 +129,7 @@ public class Main {
             e.printStackTrace();
         } catch (URISyntaxException e) {
             e.printStackTrace();
-        }*/
+        }
 
         /*GithubHttpClient githubHttpClient = new GithubHttpClient();
 

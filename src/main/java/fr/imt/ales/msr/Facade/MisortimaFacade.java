@@ -47,7 +47,7 @@ public class MisortimaFacade {
      */
     public void extractAndSaveJSONDataFromURL(String URL, String path, String filename)
             throws InterruptedException, IOException, URISyntaxException {
-        fileWriterJSON.writeJsonFile(githubHttpClient.getRawDataJson(URL, new JSONObject()),path,filename);
+        fileWriterJSON.writeJsonFile(githubHttpClient.getRawDataJson2(URL, new JSONObject()),path,filename);
     }
 
     /**
@@ -89,5 +89,16 @@ public class MisortimaFacade {
         JSONObject jsonObjectRepositories = fileReaderJSON.readJSONFile(pathToJsonFile);
         githubGitClient.cloneRepositoriesFromList(jsonObjectRepositories,pathDirectoryToStoreProjects,githubUsername,githubPassword);
     }
-
+    
+    /**
+     * read a stored JSON file and return its associated JSON object
+     * @param pathToJsonFile
+     * @return A JSONObject unfiltered
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    public JSONObject readJSONfile(String pathToJsonFile) throws IOException, URISyntaxException {
+    	JSONObject filteredJsonObject = fileReaderJSON.readJSONFile(pathToJsonFile);
+    	return filteredJsonObject;
+    }
 }
