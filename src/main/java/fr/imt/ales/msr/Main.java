@@ -14,7 +14,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.FileReader;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -119,9 +119,9 @@ public class Main {
 //            JSONArray jsonArrayTagsURL = jsonTagsURL.getJSONArray("items");
 //            String tagURL = (String) jsonArrayTagsURL.get(0);
 //            System.out.println(tagURL);
-            
-            misortimaFacade.extractAndSaveJSONDataFromURL("https://api.github.com/repos/marko-js/marko/tags",directory, "testTag");
-            
+
+            misortimaFacade.extractAndSaveJSONTagsFromURL("https://api.github.com/repos/RqDDD/OP-movReco/commits",directory, "testCommit");
+            //misortimaFacade.txtfileReposToDepotTagList("/home/rqd/Bureau/EMACS_3A/Mission_tech/LISTE_DEPOT","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot");
 
         } catch (GitAPIException e) {
             logger.error(e.getMessage());

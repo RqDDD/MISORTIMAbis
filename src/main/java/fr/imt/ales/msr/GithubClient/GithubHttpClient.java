@@ -48,7 +48,7 @@ public class GithubHttpClient {
      * @throws URISyntaxException
      * @throws InterruptedException
      */
-    public JSONObject getRawDataJson2(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {
+    public JSONObject getRawTagsJson(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {
         List<NameValuePair> urlParams = URLEncodedUtils.parse(new URI(urlEncodeSpecificChars(URLStringApi)), Charset.forName("UTF-8"));
 
         int currentPageNumber = 1;
@@ -64,7 +64,7 @@ public class GithubHttpClient {
         }
 
         logger.info("Get on : " + URLStringApi);
-        //execute the first request
+        //Execute the first request
         HttpGet httpGet = new HttpGet(urlEncodeSpecificChars(URLStringApi));
 
         //Handle response body
@@ -72,15 +72,12 @@ public class GithubHttpClient {
         HttpEntity httpEntity = httpResponse.getEntity();
         String responseString = EntityUtils.toString(httpEntity, "UTF-8");
         
-//        System.out.println(responseString.length());
-//        System.out.println(responseString.substring(0, 1));
-//        System.out.println(responseString.substring(responseString.length()-1, responseString.length()));
+        // Delete "[" and "]" to get json format understood by api 
         if ( responseString.substring(0, 1).equals("[") ){
         	responseString = responseString.substring(1,responseString.length()-1);
         }
         
         //responseString = "{" + responseString + "}";
-        //System.out.println(responseString);
         
         //Get header for the next page
         Header linkHeader = httpResponse.getFirstHeader("Link");
@@ -89,14 +86,14 @@ public class GithubHttpClient {
         Long timestampLimitResetHeader   = Long.parseLong(httpResponse.getFirstHeader("X-RateLimit-Reset").getValue());
         Integer rateLimitRemainingHeader = Integer.parseInt(httpResponse.getFirstHeader("X-RateLimit-Remaining").getValue());
         
+        // For API handling JSONObject, must begin by { and end by }, forced to create several JSONObject
         ArrayList<JSONObject> jsonObjectList = new ArrayList<JSONObject>();
         boolean check = true;
+        // No proof that it ends
         while(check) {
         	System.out.println(responseString);
         	jsonObjectList.add(new JSONObject(responseString));
         	int sizeJson = jsonObjectList.get(jsonObjectList.size()-1).toString().length();
-//        	System.out.println(jsonObjectList.get(jsonObjectList.size()-1).toString());
-//        	System.out.println(sizeJson);
         	
         	if(sizeJson+1<responseString.length()) {
         		responseString = responseString.substring(sizeJson+1, responseString.length());	
@@ -108,10 +105,6 @@ public class GithubHttpClient {
 
         }
                
-        System.out.println("STOP");
-        
-        //JSONObject jsonObjectResponse = new JSONObject(responseString);
-        //System.out.println(jsonObjectResponse.toString());
         logger.debug("Rate limit remaining : " + rateLimitRemainingHeader);
 
         githubAPILimitManager.handleLimitAPIGithub(timestampLimitResetHeader, rateLimitRemainingHeader);
@@ -136,10 +129,9 @@ public class GithubHttpClient {
         }
 
         if(isFirstPage){
+        	// run through list of JSON object
         	for(JSONObject jsonObject : jsonObjectList) {
-                //jsonAllItems = jsonObjectResponse;
         		jsonAllItems.accumulate("items", jsonObject);
-                //System.out.println(jsonAllItems.toString());
         	}
 
         }else{
@@ -156,7 +148,7 @@ public class GithubHttpClient {
         //display launchbar
         LoggerPrintUtils.printLaunchBar(logger,"Progress status request Github API" ,currentPageNumber,lastPageNumber);
         //Call recursively on the next page
-        return getRawDataJson2(urlNextPageString, jsonAllItems);
+        return getRawTagsJson(urlNextPageString, jsonAllItems);
     }
     
     public JSONObject getRawDataJson(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {
@@ -182,14 +174,6 @@ public class GithubHttpClient {
         HttpResponse httpResponse = httpClient.execute(httpGet);
         HttpEntity httpEntity = httpResponse.getEntity();
         String responseString = EntityUtils.toString(httpEntity, "UTF-8");
-        
-//        System.out.println(responseString.length());
-//        System.out.println(responseString.substring(0, 1));
-//        System.out.println(responseString.substring(responseString.length()-1, responseString.length()));
-        if ( responseString.substring(0, 1).equals("[") ){
-        	responseString = responseString.substring(1,responseString.length()-1);
-        }
-        
         
         //Get header for the next page
         Header linkHeader = httpResponse.getFirstHeader("Link");
