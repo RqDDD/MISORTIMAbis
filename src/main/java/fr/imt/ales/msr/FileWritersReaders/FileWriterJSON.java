@@ -33,7 +33,8 @@ public class FileWriterJSON {
             throw new InvalidPathException(path, "Error path to write JSON file is invalid or is not a directory");
 
         try (FileWriter fileWriter = new FileWriter(path + "/" + filename)) {
-            fileWriter.write(jsonObjectToWrite.toString(INDENT_FACTOR));
+        	String stringToWrite = jsonObjectToWrite.toString(INDENT_FACTOR);
+            fileWriter.write(stringToWrite);
             logger.info("Successfully wrote JSON Object");
         } catch (IOException e) {
             logger.error("Error during writing JSON object " +filename+ " : " + e.getMessage());

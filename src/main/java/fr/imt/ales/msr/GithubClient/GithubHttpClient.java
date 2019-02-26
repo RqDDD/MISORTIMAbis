@@ -2,6 +2,8 @@ package fr.imt.ales.msr.GithubClient;
 
 import fr.imt.ales.msr.FileWritersReaders.FileWriterJSON;
 import fr.imt.ales.msr.LoggerUtils.LoggerPrintUtils;
+import net.minidev.json.parser.JSONParser;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
 import org.apache.http.client.methods.HttpGet;
@@ -38,6 +40,8 @@ public class GithubHttpClient {
         httpClient = HttpClients.createDefault();
         githubAPILimitManager = new GithubAPILimitManager();
     }
+    
+    static int comp = 0;
 
     /**
      *
@@ -48,6 +52,7 @@ public class GithubHttpClient {
      * @throws URISyntaxException
      * @throws InterruptedException
      */
+    
     public JSONObject getRawTagsJson(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {
         List<NameValuePair> urlParams = URLEncodedUtils.parse(new URI(urlEncodeSpecificChars(URLStringApi)), Charset.forName("UTF-8"));
 
@@ -73,9 +78,9 @@ public class GithubHttpClient {
         String responseString = EntityUtils.toString(httpEntity, "UTF-8");
         
         // Delete "[" and "]" to get json format understood by api 
-        if ( responseString.substring(0, 1).equals("[") ){
-        	responseString = responseString.substring(1,responseString.length()-1);
-        }
+//        if ( responseString.substring(0, 1).equals("[") ){
+//        	responseString = responseString.substring(1,responseString.length()-1);
+//        }
         
         //responseString = "{" + responseString + "}";
         
@@ -86,24 +91,28 @@ public class GithubHttpClient {
         Long timestampLimitResetHeader   = Long.parseLong(httpResponse.getFirstHeader("X-RateLimit-Reset").getValue());
         Integer rateLimitRemainingHeader = Integer.parseInt(httpResponse.getFirstHeader("X-RateLimit-Remaining").getValue());
         
+        
+        JSONArray jsonObject = new JSONArray(responseString);
+        
+        
         // For API handling JSONObject, must begin by { and end by }, forced to create several JSONObject
-        ArrayList<JSONObject> jsonObjectList = new ArrayList<JSONObject>();
-        boolean check = true;
-        // No proof that it ends
-        while(check) {
-        	System.out.println(responseString);
-        	jsonObjectList.add(new JSONObject(responseString));
-        	int sizeJson = jsonObjectList.get(jsonObjectList.size()-1).toString().length();
-        	
-        	if(sizeJson+1<responseString.length()) {
-        		responseString = responseString.substring(sizeJson+1, responseString.length());	
-        	}
-        	else {
-        		check = false;
-        	}
-        	
-
-        }
+//        ArrayList<JSONObject> jsonObjectList = new ArrayList<JSONObject>();
+//        boolean check = true;
+//        // No proof that it ends
+//        while(check) {
+//        	System.out.println(responseString);
+//        	jsonObjectList.add(new JSONObject(responseString));
+//        	int sizeJson = jsonObjectList.get(jsonObjectList.size()-1).toString().length();
+//        	
+//        	if(sizeJson+1<responseString.length()) {
+//        		responseString = responseString.substring(sizeJson+1, responseString.length());	
+//        	}
+//        	else {
+//        		check = false;
+//        	}
+//        	
+//
+//        }
                
         logger.debug("Rate limit remaining : " + rateLimitRemainingHeader);
 
@@ -127,21 +136,27 @@ public class GithubHttpClient {
                 }
             }
         }
-
+        
         if(isFirstPage){
         	// run through list of JSON object
-        	for(JSONObject jsonObject : jsonObjectList) {
-        		jsonAllItems.accumulate("items", jsonObject);
+//        	for(JSONObject jsonObject : jsonObjectList) {
+//        		jsonAllItems.accumulate("items", jsonObject);
+        	jsonAllItems.put("items", jsonObject);
+        	
         	}
 
-        }else{
+        else{
             //concatenate list items
-        	for(JSONObject jsonObject : jsonObjectList) {
-        		jsonAllItems.accumulate("items", jsonObject);
-        	}
+//        	for(JSONObject jsonObject : jsonObjectList) {
+//        		jsonAllItems.accumulate("items", jsonObject);      	   	
+//        	}
+        	jsonAllItems.accumulate("items", jsonObject);
+        	System.out.println("ICCCCCCCIIIIIII" + jsonAllItems.toString().length());
+        	
         }
 
         //return the json object if there is no next page
+        comp++;
         if(urlNextPageString == null || urlNextPageString.equals(""))
             return jsonAllItems;
 
@@ -174,6 +189,7 @@ public class GithubHttpClient {
         HttpResponse httpResponse = httpClient.execute(httpGet);
         HttpEntity httpEntity = httpResponse.getEntity();
         String responseString = EntityUtils.toString(httpEntity, "UTF-8");
+        //System.out.println(responseString);
         
         //Get header for the next page
         Header linkHeader = httpResponse.getFirstHeader("Link");
@@ -181,7 +197,7 @@ public class GithubHttpClient {
         //Get headers and values for API limitations
         Long timestampLimitResetHeader   = Long.parseLong(httpResponse.getFirstHeader("X-RateLimit-Reset").getValue());
         Integer rateLimitRemainingHeader = Integer.parseInt(httpResponse.getFirstHeader("X-RateLimit-Remaining").getValue());
-
+        
         JSONObject jsonObjectResponse = new JSONObject(responseString);
 
         logger.debug("Rate limit remaining : " + rateLimitRemainingHeader);
@@ -208,13 +224,89 @@ public class GithubHttpClient {
         }
 
         if(isFirstPage){
-            jsonAllItems = jsonObjectResponse;
+            jsonAllItems.put("items", jsonObjectResponse);
         }else{
             //concatenate list items
-            jsonAllItems.getJSONArray("items").put(jsonObjectResponse.getJSONArray("items"));
+            jsonAllItems.put("items", jsonObjectResponse);
         }
 
         //return the json object if there is no next page
+        
+        if(urlNextPageString == null || urlNextPageString.equals(""))
+            return jsonAllItems;
+
+        //display launchbar
+        LoggerPrintUtils.printLaunchBar(logger,"Progress status request Github API" ,currentPageNumber,lastPageNumber);
+        //Call recursively on the next page
+        return getRawDataJson(urlNextPageString, jsonAllItems);
+    }
+    
+    public JSONObject getCommitBoundedJson(String URLStringApi, JSONObject jsonAllItems, String dateBoundaryInf, String dateBoundarySup) throws IOException, URISyntaxException, InterruptedException {
+        List<NameValuePair> urlParams = URLEncodedUtils.parse(new URI(urlEncodeSpecificChars(URLStringApi)), Charset.forName("UTF-8"));
+
+        int currentPageNumber = 1;
+        int lastPageNumber = 1;
+        String urlNextPageString = null;
+        boolean isFirstPage = true;
+
+
+        for (NameValuePair param : urlParams) {
+            if(param.getName().equals("page")){
+                currentPageNumber = Integer.parseInt(param.getValue());
+            }
+        }
+
+        logger.info("Get on : " + URLStringApi);
+        //execute the first request
+        HttpGet httpGet = new HttpGet(urlEncodeSpecificChars(URLStringApi));
+
+        //Handle response body
+        HttpResponse httpResponse = httpClient.execute(httpGet);
+        HttpEntity httpEntity = httpResponse.getEntity();
+        String responseString = EntityUtils.toString(httpEntity, "UTF-8");
+        //System.out.println(responseString);
+        
+        //Get header for the next page
+        Header linkHeader = httpResponse.getFirstHeader("Link");
+
+        //Get headers and values for API limitations
+        Long timestampLimitResetHeader   = Long.parseLong(httpResponse.getFirstHeader("X-RateLimit-Reset").getValue());
+        Integer rateLimitRemainingHeader = Integer.parseInt(httpResponse.getFirstHeader("X-RateLimit-Remaining").getValue());
+        
+        JSONObject jsonObjectResponse = new JSONObject(responseString);
+
+        logger.debug("Rate limit remaining : " + rateLimitRemainingHeader);
+
+        githubAPILimitManager.handleLimitAPIGithub(timestampLimitResetHeader, rateLimitRemainingHeader);
+
+        if(linkHeader != null){
+        	//System.out.println(linkHeader);
+            HeaderElement[] headerElementTabLink = linkHeader.getElements();
+            for (HeaderElement headerElement : headerElementTabLink) {
+                String headerElementLinkString = headerElement.toString();
+                System.out.println(headerElementLinkString);
+                if(headerElementLinkString.contains("next")) {
+                    urlNextPageString = headerElementLinkString.substring(headerElementLinkString.indexOf("<") + 1, headerElementLinkString.indexOf(">"));
+                    logger.debug("Next page : " + urlNextPageString);
+                }
+                if(headerElementLinkString.contains("prev")) {
+                    isFirstPage = false;
+                }
+                if (headerElementLinkString.contains("last")){
+                    lastPageNumber = Integer.parseInt(StringUtils.substringBetween(headerElementLinkString,"page=", ">"));
+                }
+            }
+        }
+
+        if(isFirstPage){
+            jsonAllItems.put("items", jsonObjectResponse);
+        }else{
+            //concatenate list items
+            jsonAllItems.put("items", jsonObjectResponse);
+        }
+
+        //return the json object if there is no next page
+        
         if(urlNextPageString == null || urlNextPageString.equals(""))
             return jsonAllItems;
 

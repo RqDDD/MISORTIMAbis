@@ -120,9 +120,12 @@ public class Main {
 //            String tagURL = (String) jsonArrayTagsURL.get(0);
 //            System.out.println(tagURL);
 
-            misortimaFacade.extractAndSaveJSONTagsFromURL("https://api.github.com/repos/RqDDD/OP-movReco/commits",directory, "testCommit");
+            //misortimaFacade.extractAndSaveJSONTagsFromURL("https://api.github.com/repos/RqDDD/OP-movReco/commits",directory, "testCommit");
             //misortimaFacade.txtfileReposToDepotTagList("/home/rqd/Bureau/EMACS_3A/Mission_tech/LISTE_DEPOT","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot");
-
+            misortimaFacade.txtfileReposToCommitTagIssuesList("/home/rqd/Bureau/EMACS_3A/Mission_tech/LISTE_DEPOT","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot", "issues");
+            //misortimaFacade.filterCommit("/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot/marko_commits.json", "dateBoundaryInf", "dateBoundarySup");
+            //misortimaFacade.filterIssuesTitle("/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot/BroadleafCommerce_issues.json","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot/BroadleafCommerce_issues_title");
+            
         } catch (GitAPIException e) {
             logger.error(e.getMessage());
         } catch (IOException e) {

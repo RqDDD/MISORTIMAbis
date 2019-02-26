@@ -13,6 +13,7 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -58,7 +59,7 @@ public class MisortimaFacade {
     
     
     /**
-     * Gets the data from the Github API and writes the result in a json file at the specific path given
+     * Gets the repos tags/commits/issues from the Github API and writes the result in a json file at the specific path given
      * @param tagURL  tags URL to request
      * @param path Path to store the file
      * @param filename Filename of the JSON file
@@ -66,10 +67,29 @@ public class MisortimaFacade {
      * @throws IOException IOException thrown when an error occurred during the writing of the JSON file
      * @throws URISyntaxException URISyntaxException thrown when the URL is malformed
      */
+    
     public void extractAndSaveJSONTagsFromURL(String tagURL, String path, String filename)
             throws InterruptedException, IOException, URISyntaxException {
-        fileWriterJSON.writeJsonFile(githubHttpClient.getRawTagsJson(tagURL, new JSONObject()),path,filename);
+    	JSONObject obj = githubHttpClient.getRawTagsJson(tagURL, new JSONObject());
+    	//System.out.println(obj.toString());
+        fileWriterJSON.writeJsonFile(obj,path,filename);
     }
+    
+    /**
+     * Gets the commit bounded from the Github API and writes the result in a json file at the specific path given
+     * @param tagURL  tags URL to request
+     * @param path Path to store the file
+     * @param filename Filename of the JSON file
+     * @throws InterruptedException
+     * @throws IOException IOException thrown when an error occurred during the writing of the JSON file
+     * @throws URISyntaxException URISyntaxException thrown when the URL is malformed
+     */
+//    public void extractAndSaveJSONCommitBoundFromURL(String tagURL, String path, String filename)
+//            throws InterruptedException, IOException, URISyntaxException {
+//    	JSONObject obj = githubHttpClient.getCommitBoundedJson(tagURL, new JSONObject(), "", );
+//    	//System.out.println(obj.toString());
+//        fileWriterJSON.writeJsonFile(obj,path,filename);
+//    }
 
     /**
      * Filters the fields stored in a JSON file and store the result in a new JSON file
@@ -149,9 +169,12 @@ public class MisortimaFacade {
         		// Get repos tags
                 List<String> fieldsToExtract = new ArrayList<>();
                 fieldsToExtract.add("tags_url");
+
+                fieldsToExtract.add("tags_url");
                 // get url tag from json repos
 	            filterData(fieldsToExtract, pathToDirectory + "/" + filename + "_raw.json", pathToDirectory , filename + "_tagsURL.json");
 	            JSONObject jsonTagsURL = readJSONfile(pathToDirectory + "/" +filename + "_tagsURL.json");
+	            //System.out.println(jsonTagsURL.toString());
 	            JSONArray jsonArrayTagsURL = jsonTagsURL.getJSONArray("items");
 	            String tagURL = (String) jsonArrayTagsURL.get(0);  // URL tag
 	            // Extract tag
@@ -167,8 +190,133 @@ public class MisortimaFacade {
     
     }
     
-    public void filterCommit(String dateBoundaryInf, String dateBoundarySup, List<String> WordList) {
+    /**
+     * read a txt files that contains repository url list to grab all the commit associated
+     * @param pathToURLFile
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws InterruptedException
+     */
+    public void txtfileReposToCommitTagIssuesList(String pathToURLFile, String pathToDirectory, String CommitTagIssues) throws InterruptedException, IOException, URISyntaxException{
+        try{
+        	InputStream flux=new FileInputStream(pathToURLFile); 
+        	InputStreamReader read=new InputStreamReader(flux);
+        	BufferedReader buff=new BufferedReader(read);
+        	String lineURL;
+        	while ((lineURL=buff.readLine())!=null){
+        		System.out.println(lineURL);
+        		
+        		// Extract raw JSON for a repos
+        		// Get repos name
+        		String[] tokens = lineURL.split("/");
+        		String filename = tokens[tokens.length -1];
+        		
+        		
+                switch (CommitTagIssues) {
+	            	case "tags":
+	            		lineURL = lineURL + "/tags";
+	            		filename = filename + "_tags.json";
+	            		break;
+	            	case "issues":
+	            		lineURL = lineURL + "/issues";
+	            		filename = filename + "_issues.json";
+	            		break;
+	            	case "commits":
+	            		lineURL = lineURL + "/commits";
+	            		filename = filename + "_commits.json";
+	            		// filter commits with date boundaries
+	            		break;
+	            		
+	            	default:
+	            		System.out.println("Use another keyword : commits tags or issues");// use logger
+	            		break;
+                }   
+                
+              
+	            // Extract tags commits or issues
+	            extractAndSaveJSONTagsFromURL(lineURL,pathToDirectory, filename);
+	            
+        	}
+        	buff.close(); 
+        	}		
+    	catch (Exception e){
+    	System.out.println(e.toString());
+    	}
+    }
+    
+    public void txtfileReposToCommitBound(String pathToURLFile, String pathToDirectory, String CommitTagIssues) throws InterruptedException, IOException, URISyntaxException{
+        try{
+        	InputStream flux=new FileInputStream(pathToURLFile); 
+        	InputStreamReader read=new InputStreamReader(flux);
+        	BufferedReader buff=new BufferedReader(read);
+        	String lineURL;
+        	while ((lineURL=buff.readLine())!=null){
+        		System.out.println(lineURL);
+        		
+        		// Extract raw JSON for a repos
+        		// Get repos name
+        		String[] tokens = lineURL.split("/");
+        		String filename = tokens[tokens.length -1];
+        		
+        		
+    
+        		lineURL = lineURL + "/commits";
+        		filename = filename + "_commits.json";
+
+          
+	            // Extract commits 
+	            //extractAndSaveJSONCommitBoundFromURL(lineURL,pathToDirectory, filename);
+	            
+        	}
+        	buff.close(); 
+        	}		
+    	catch (Exception e){
+    	System.out.println(e.toString());
+    	}
+    }
+    
+    
+    public void filterCommit(String pathToCommitFile, String dateBoundaryInf, String dateBoundarySup) throws IOException, URISyntaxException {
+    	JSONObject commitFileJson= fileReaderJSON.readJSONFile(pathToCommitFile);
+    	boolean check = true;
+    	int compt = 0;
+    	while (check) {
+    		try {
+    			// get date
+    			commitFileJson.getJSONArray("items").getJSONObject(compt).getJSONObject("commit").getJSONObject("committer").get("date");
+    		}catch (Exception e){ 		
+    			check = false;
+    		}
+    		System.out.println(commitFileJson.getJSONArray("items").getJSONObject(compt).getJSONObject("commit").getJSONObject("committer").get("date"));
+    		compt++;
+    	}
+    	//System.out.println(commitFileJson.getJSONArray("items").getJSONObject(80).getJSONObject("commit").getJSONObject("committer").get("date"));
     	
+    }
+    
+    public void filterIssuesTitle(String pathToIssuesFile, String PathTargetFile) throws IOException, URISyntaxException {
+    	JSONObject commitFileJson= fileReaderJSON.readJSONFile(pathToIssuesFile);
+    	boolean check = true;
+    	int compt = 0;
+    	
+    	//create file
+  
+    	// not good
+    	FileWriter fileWriter = new FileWriter(PathTargetFile);
+   
+    	while (check) {
+    		try {
+    			
+				// get title and write it
+    			fileWriter.write(commitFileJson.getJSONArray("items").getJSONObject(compt).get("title").toString() + "\n" );
+    		}catch (Exception e){ 		
+    			check = false;
+    		}
+    		//System.out.println(commitFileJson.getJSONArray("items").getJSONObject(compt).get("title"));
+    		compt++;
+    	}
+    	fileWriter.close();
+    	    	
     }
 }
 
