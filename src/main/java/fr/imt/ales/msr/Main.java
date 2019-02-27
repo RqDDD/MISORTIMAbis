@@ -23,7 +23,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 public class Main {
-    public static void main(String[] args) throws InterruptedException, ParseException {
+    public static void main(String[] args) throws InterruptedException, ParseException, java.text.ParseException {
 
         /*try {
             MisortimaFacade misortimaFacade  = new MisortimaFacade();
@@ -122,10 +122,10 @@ public class Main {
 
             //misortimaFacade.extractAndSaveJSONTagsFromURL("https://api.github.com/repos/RqDDD/OP-movReco/commits",directory, "testCommit");
             //misortimaFacade.txtfileReposToDepotTagList("/home/rqd/Bureau/EMACS_3A/Mission_tech/LISTE_DEPOT","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot");
-            misortimaFacade.txtfileReposToCommitTagIssuesList("/home/rqd/Bureau/EMACS_3A/Mission_tech/LISTE_DEPOT","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot", "issues");
+            //misortimaFacade.txtfileReposToCommitTagIssuesList("/home/rqd/Bureau/EMACS_3A/Mission_tech/LISTE_DEPOT","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot", "commits");
             //misortimaFacade.filterCommit("/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot/marko_commits.json", "dateBoundaryInf", "dateBoundarySup");
             //misortimaFacade.filterIssuesTitle("/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot/BroadleafCommerce_issues.json","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot/BroadleafCommerce_issues_title");
-            
+            misortimaFacade.filterCommitTemporalBound("/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot/BroadleafCommerce_commits.json","/home/rqd/Bureau/EMACS_3A/Mission_tech/Entrepot/", "BroadleafCommerce_commit_filteredBound", "2018-10-23T05:55:46Z","2019-02-20T18:04:55Z");
         } catch (GitAPIException e) {
             logger.error(e.getMessage());
         } catch (IOException e) {

@@ -53,7 +53,7 @@ public class GithubHttpClient {
      * @throws InterruptedException
      */
     
-    public JSONObject getRawTagsJson(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {
+    public JSONObject getRawTagCommitIssueJson(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {
         List<NameValuePair> urlParams = URLEncodedUtils.parse(new URI(urlEncodeSpecificChars(URLStringApi)), Charset.forName("UTF-8"));
 
         int currentPageNumber = 1;
@@ -141,7 +141,7 @@ public class GithubHttpClient {
         	// run through list of JSON object
 //        	for(JSONObject jsonObject : jsonObjectList) {
 //        		jsonAllItems.accumulate("items", jsonObject);
-        	jsonAllItems.put("items", jsonObject);
+        	jsonAllItems.accumulate("items", jsonObject);
         	
         	}
 
@@ -157,13 +157,13 @@ public class GithubHttpClient {
 
         //return the json object if there is no next page
         comp++;
-        if(urlNextPageString == null || urlNextPageString.equals(""))
+        if(urlNextPageString == null || urlNextPageString.equals("") || comp == 5)
             return jsonAllItems;
 
         //display launchbar
         LoggerPrintUtils.printLaunchBar(logger,"Progress status request Github API" ,currentPageNumber,lastPageNumber);
         //Call recursively on the next page
-        return getRawTagsJson(urlNextPageString, jsonAllItems);
+        return getRawTagCommitIssueJson(urlNextPageString, jsonAllItems);
     }
     
     public JSONObject getRawDataJson(String URLStringApi, JSONObject jsonAllItems) throws IOException, URISyntaxException, InterruptedException {

@@ -18,7 +18,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -70,7 +73,7 @@ public class MisortimaFacade {
     
     public void extractAndSaveJSONTagsFromURL(String tagURL, String path, String filename)
             throws InterruptedException, IOException, URISyntaxException {
-    	JSONObject obj = githubHttpClient.getRawTagsJson(tagURL, new JSONObject());
+    	JSONObject obj = githubHttpClient.getRawTagCommitIssueJson(tagURL, new JSONObject());
     	//System.out.println(obj.toString());
         fileWriterJSON.writeJsonFile(obj,path,filename);
     }
@@ -191,7 +194,7 @@ public class MisortimaFacade {
     }
     
     /**
-     * read a txt files that contains repository url list to grab all the commit associated
+     * read a txt files that contains repository url list to grab all the commit associated. direct add /tags /commits or /issues to URL 
      * @param pathToURLFile
      * @throws IOException
      * @throws URISyntaxException
@@ -244,6 +247,7 @@ public class MisortimaFacade {
     	}
     }
     
+    // failed attempt to filter commit during asking api
     public void txtfileReposToCommitBound(String pathToURLFile, String pathToDirectory, String CommitTagIssues) throws InterruptedException, IOException, URISyntaxException{
         try{
         	InputStream flux=new FileInputStream(pathToURLFile); 
@@ -276,47 +280,97 @@ public class MisortimaFacade {
     }
     
     
-    public void filterCommit(String pathToCommitFile, String dateBoundaryInf, String dateBoundarySup) throws IOException, URISyntaxException {
-    	JSONObject commitFileJson= fileReaderJSON.readJSONFile(pathToCommitFile);
-    	boolean check = true;
-    	int compt = 0;
-    	while (check) {
-    		try {
-    			// get date
-    			commitFileJson.getJSONArray("items").getJSONObject(compt).getJSONObject("commit").getJSONObject("committer").get("date");
-    		}catch (Exception e){ 		
-    			check = false;
-    		}
-    		System.out.println(commitFileJson.getJSONArray("items").getJSONObject(compt).getJSONObject("commit").getJSONObject("committer").get("date"));
-    		compt++;
-    	}
-    	//System.out.println(commitFileJson.getJSONArray("items").getJSONObject(80).getJSONObject("commit").getJSONObject("committer").get("date"));
-    	
-    }
     
-    public void filterIssuesTitle(String pathToIssuesFile, String PathTargetFile) throws IOException, URISyntaxException {
-    	JSONObject commitFileJson= fileReaderJSON.readJSONFile(pathToIssuesFile);
-    	boolean check = true;
-    	int compt = 0;
+    /**
+     * filter json files containing issues to get title (where labeled bugs for now)
+     * @param pathToURLFile
+     * @param pathToTargetFile
+     * @throws IOException
+     * @throws URISyntaxException
+     */
+    public void filterIssuesTitle(String pathToIssuesFile, String pathTargetFile) throws IOException, URISyntaxException {
+    	JSONObject issuesFileJson= fileReaderJSON.readJSONFile(pathToIssuesFile);
     	
     	//create file
   
     	// not good
-    	FileWriter fileWriter = new FileWriter(PathTargetFile);
-   
-    	while (check) {
-    		try {
+    	FileWriter fileWriter = new FileWriter(pathTargetFile);   	
+    	
+    	// Run through JSON to get issues' title, really weak code
+    	for(int i = 0 ; i < issuesFileJson.getJSONArray("items").length(); i++) {
+    		for(int j = 0 ; j < issuesFileJson.getJSONArray("items").getJSONArray(i).length(); j++) {
+    			try {
+    				//only grab issues labeled bug
+    				if (issuesFileJson.getJSONArray("items").getJSONArray(i).getJSONObject(j).getJSONArray("labels").toString().contains("type-bug")) {
+    					fileWriter.write(issuesFileJson.getJSONArray("items").getJSONArray(i).getJSONObject(j).get("title").toString()+ "\n");
+
+    				}
+    			}catch(Exception e) {
+    					System.out.println(e); // log ? not clean
+    			}
     			
-				// get title and write it
-    			fileWriter.write(commitFileJson.getJSONArray("items").getJSONObject(compt).get("title").toString() + "\n" );
-    		}catch (Exception e){ 		
-    			check = false;
     		}
-    		//System.out.println(commitFileJson.getJSONArray("items").getJSONObject(compt).get("title"));
-    		compt++;
+    		
     	}
+    	 	
     	fileWriter.close();
-    	    	
+    	System.out.println("issue s title grabbed and stored successfully");
+
+
+    }
+    
+    
+    /**
+     * filter with temporal window json files containing commit. Careful does not return in the same order, don't know why. Careful with format JSONObject/Array.
+     * @param pathToURLFile
+     * @param pathToTarget
+     * @param filename
+     * @param dateUnder format ISO8601
+     * @param dateUpper format ISO8601
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws ParseException 
+     */
+    public void filterCommitTemporalBound(String pathToIssuesFile, String pathTarget, String filename, String dateUnderString, String dateUpperString) throws IOException, URISyntaxException, ParseException {
+    	JSONObject commitFileJson= fileReaderJSON.readJSONFile(pathToIssuesFile);
+    	JSONObject jsonAllItems = new JSONObject();
+    	
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    	// date conversion
+    	Date dateUnder = sdf.parse(dateUnderString);
+    	Date dateUpper = sdf.parse(dateUpperString);
+    	
+    	// Run through JSON to get issues' title, really weak code
+    	for(int i = 0 ; i < commitFileJson.getJSONArray("items").length(); i++) {
+    		for(int j = 0 ; j < commitFileJson.getJSONArray("items").getJSONArray(i).length(); j++) {
+    			try {
+    				//only grab commit in the temporal window
+    		    	String dateCommitString = commitFileJson.getJSONArray("items").getJSONArray(i).getJSONObject(j).getJSONObject("commit").getJSONObject("committer").getString("date");
+    		    	
+    		    	Date commitDateTime = sdf.parse(dateCommitString);
+    				if (commitDateTime.after(dateUnder) && commitDateTime.before(dateUpper)) {
+    					//System.out.println(commitFileJson.getJSONArray("items").getJSONArray(i).getJSONObject(j).toString());
+    					JSONObject jsonObject = new JSONObject(commitFileJson.getJSONArray("items").getJSONArray(i).getJSONObject(j).toString());
+    					jsonAllItems.accumulate("items", jsonObject);
+    				}
+    			}catch(Exception e) {
+    					System.out.println(e); // log ? not clean
+    			}    			
+    		}	
+    	}
+    	
+    	// not good 
+    	fileWriterJSON.writeJsonFile(jsonAllItems,pathTarget,filename);
+//    	System.out.println(commitFileJson.getJSONArray("items").getJSONArray(0).getJSONObject(0).getJSONObject("commit").getJSONObject("committer").getString("date"));
+//
+//    	System.out.println(commitFileJson.getJSONArray("items").getJSONArray(0).getJSONObject(0).toString());
+//    	String dateCommitString = commitFileJson.getJSONArray("items").getJSONArray(0).getJSONObject(0).getJSONObject("commit").getJSONObject("committer").getString("date");
+    	//dateCommitString = dateCommitString.split("T")[0];
+//    	System.out.println(dateCommitString);
+//    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+//    	Date matchDateTime = sdf.parse(dateCommitString);
+//    	System.out.println(matchDateTime);
+    	
     }
 }
 
